@@ -137,14 +137,18 @@ public class BshClassPath
 
     public void add( URL [] urls ) {
         path.addAll( Arrays.asList(urls) );
-        if ( mapsInitialized )
-            map( urls );
+        synchronized (this) {
+            if ( mapsInitialized )
+                map( urls );
+        }
     }
 
     public void add( URL url ) throws IOException {
         path.add(url);
-        if ( mapsInitialized )
-            map( url );
+        synchronized (this) {
+            if ( mapsInitialized )
+                map( url );
+        }
     }
 
     /**
@@ -473,6 +477,8 @@ public class BshClassPath
         String top = topDir.getAbsolutePath();
 
         File [] children = dir.listFiles();
+        if ( null == children )
+            children = new File[0];
         for (int i=0; i< children.length; i++)  {
             File child = children[i];
             if ( child.isDirectory() )
@@ -772,9 +778,8 @@ public class BshClassPath
                 return null;
 
             byte [] bytes;
-            try {
-                FileInputStream fis = new FileInputStream(file);
-                DataInputStream dis = new DataInputStream( fis );
+            try ( FileInputStream fis = new FileInputStream(file);
+                    DataInputStream dis = new DataInputStream( fis ) ) {
 
                 bytes = new byte [ (int)file.length() ];
 
