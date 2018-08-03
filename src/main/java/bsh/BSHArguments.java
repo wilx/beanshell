@@ -31,7 +31,7 @@ package bsh;
 class BSHArguments extends SimpleNode
 {
     BSHArguments(int id) { super(id); }
-
+    Object[] customArgs = null;
     /**
         This node holds a set of arguments for a method invocation or
         constructor call.
@@ -52,6 +52,10 @@ class BSHArguments extends SimpleNode
     public Object[] getArguments( CallStack callstack, Interpreter interpreter)
         throws EvalError
     {
+        // side step evaluation with supplied arguments
+        if ( null != customArgs )
+            return customArgs;
+
         // evaluate each child
         Object[] args = new Object[jjtGetNumChildren()];
         for(int i = 0; i < args.length; i++)

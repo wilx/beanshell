@@ -27,6 +27,8 @@
 
 package bsh;
 
+import java.lang.reflect.Constructor;
+
 public class DelayedEvalBshMethod extends BshMethod
 {
     String returnTypeDescriptor;
@@ -37,6 +39,31 @@ public class DelayedEvalBshMethod extends BshMethod
     // used for the delayed evaluation...
     transient CallStack callstack;
     transient Interpreter interpreter;
+    private Constructor<?> constructor = null;
+
+    DelayedEvalBshMethod(String name, Constructor<?> con, NameSpace declaringNameSpace) {
+        this(name, null, null, new String[con.getParameterCount()], null,
+            null, new BSHBlock(0), declaringNameSpace, null, null, null);
+
+        this.constructor = con;
+        this.getModifiers().addModifier("public");
+        this.getParameterModifiers();
+        declaringNameSpace.setMethod(this);
+
+        // counterfeit super method invocation
+        BSHAmbiguousName nm = new BSHAmbiguousName(0);
+        nm.text = "super";
+        BSHArguments args = new BSHArguments(0);
+        args.customArgs = This.CONTEXT_ARGS.get().remove(name);
+        Node meth = new BSHMethodInvocation(0);
+        meth.jjtAddChild(args, 1);
+        meth.jjtAddChild(nm, 0);
+        Node prim = new BSHPrimaryExpression(0);
+        prim.jjtAddChild(meth, 0);
+        Node ass = new BSHAssignment(0);
+        ass.jjtAddChild(prim, 0);
+        super.methodBody.jjtAddChild(ass, 0);
+    }
 
     /**
         This constructor is used in class generation.  It supplies String type
@@ -73,7 +100,7 @@ public class DelayedEvalBshMethod extends BshMethod
 
     public String getReturnTypeDescriptor() { return returnTypeDescriptor; }
 
-    public Class getReturnType()
+    public Class<?> getReturnType()
     {
         if ( returnTypeNode == null )
             return null;
@@ -86,10 +113,17 @@ public class DelayedEvalBshMethod extends BshMethod
         }
     }
 
-    public String [] getParamTypeDescriptors() { return paramTypeDescriptors; }
+    public String [] getParamTypeDescriptors() {
+        if ( null != this.constructor )
+            return ClassGeneratorUtil.getTypeDescriptors(
+                        this.getParameterTypes());
+        return paramTypeDescriptors;
+    }
 
-    public Class [] getParameterTypes()
+    public Class<?>[] getParameterTypes()
     {
+        if ( null != this.constructor )
+            return this.constructor.getParameterTypes();
         // BSHFormalParameters will cache the type for us
         try {
             return (Class [])paramTypesNode.eval( callstack, interpreter );
