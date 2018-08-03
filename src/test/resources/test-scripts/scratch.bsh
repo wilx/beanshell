@@ -1,0 +1,41 @@
+#!/bin/java bsh.Interpreter
+
+source("TestHarness.bsh");
+source("Assert.bsh");
+
+//parent class with default and other constructor
+class OverLoadedConstructor {
+ a = "";
+ cls = this.getClass();
+ OverLoadedConstructor() { this.a = "foo"; }
+ OverLoadedConstructor(a)  { this.a = a; }
+ go() { a + " bar"; }
+}
+
+// anon with args
+anon = new OverLoadedConstructor("foobar") {
+    spr = this.getClass().getSuperclass();
+    go() { super.go() + " baz"; }
+};
+
+print("----------------------------------------");
+print("with args: " + anon.go());
+print("super class: " + anon.spr);
+print("this class: " + anon.cls);
+
+// anon with no args
+anon = new OverLoadedConstructor() {
+ spr = this.getClass().getSuperclass();
+ go() { super.go() + " baz"; }
+};
+
+print("----------------------------------------");
+print("without args: " + anon.go());
+print("super class: " + anon.spr);
+print("this class: " + anon.cls);
+print("----------------------------------------");
+
+
+complete();
+
+
