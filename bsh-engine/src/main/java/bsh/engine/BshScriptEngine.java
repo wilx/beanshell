@@ -16,7 +16,6 @@ import bsh.ExternalNameSpace;
 import bsh.Interpreter;
 import bsh.NameSpace;
 import bsh.ParseException;
-import bsh.PreparsedScript;
 import bsh.TargetError;
 
 import java.io.IOException;

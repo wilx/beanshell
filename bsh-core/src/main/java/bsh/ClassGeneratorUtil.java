@@ -198,14 +198,14 @@ public class ClassGeneratorUtil implements Opcodes {
     public byte[] generateClass() {
         NameSpace classStaticNameSpace = This.contextStore.get(this.uuid);
         // Force the class public for now...
-        int classMods = getASMModifiers(classModifiers) | ACC_PUBLIC;
+        int classMods = getASMModifiers(classModifiers) | Opcodes.ACC_PUBLIC;
         if (type == INTERFACE)
-            classMods |= ACC_INTERFACE | ACC_ABSTRACT;
+            classMods |= Opcodes.ACC_INTERFACE | Opcodes.ACC_ABSTRACT;
         else if (type == ENUM)
-            classMods |= ACC_FINAL | ACC_SUPER | ACC_ENUM;
-        else if ( (classMods & ACC_ABSTRACT) > 0 )
+            classMods |= Opcodes.ACC_FINAL | Opcodes.ACC_SUPER | Opcodes.ACC_ENUM;
+        else if ((classMods & Opcodes.ACC_ABSTRACT) > 0 )
             // bsh classes are not abstract
-            classMods -= ACC_ABSTRACT;
+            classMods -= Opcodes.ACC_ABSTRACT;
 
         String[] interfaceNames = new String[interfaces.length + 1]; // +1 for GeneratedClass
         for (int i = 0; i < interfaces.length; i++) {
@@ -219,15 +219,15 @@ public class ClassGeneratorUtil implements Opcodes {
 
         ClassWriter cw = new ClassWriter(ClassWriter.COMPUTE_FRAMES);
         String signature = type == ENUM ? "Ljava/lang/Enum<"+classDescript+">;" : null;
-        cw.visit(V1_8, classMods, fqClassName, signature, superClassName, interfaceNames);
+        cw.visit(Opcodes.V1_8, classMods, fqClassName, signature, superClassName, interfaceNames);
 
         if ( type != INTERFACE )
             // Generate the bsh instance 'This' reference holder field
-            generateField(BSHTHIS+className, "Lbsh/This;", ACC_PUBLIC, cw);
+            generateField(BSHTHIS+className, "Lbsh/This;", Opcodes.ACC_PUBLIC, cw);
         // Generate the static bsh static This reference holder field
-        generateField(BSHSTATIC+className, "Lbsh/This;", ACC_PUBLIC + ACC_STATIC + ACC_FINAL, cw);
+        generateField(BSHSTATIC+className, "Lbsh/This;", Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, cw);
         // Generate class UUID
-        generateField("UUID", "Ljava/lang/String;", ACC_PUBLIC + ACC_STATIC + ACC_FINAL, this.uuid, cw);
+        generateField("UUID", "Ljava/lang/String;", Opcodes.ACC_PUBLIC + Opcodes.ACC_STATIC + Opcodes.ACC_FINAL, this.uuid, cw);
 
         // Generate the fields
         for (Variable var : vars) {
@@ -244,7 +244,7 @@ public class ClassGeneratorUtil implements Opcodes {
                 // keep constant fields virtual
                 continue;
             } else if ( type == ENUM && var.hasModifier("enum") ) {
-                modifiers |= ACC_ENUM | ACC_FINAL;
+                modifiers |= Opcodes.ACC_ENUM | Opcodes.ACC_FINAL;
                 fType = classDescript;
             }
 
@@ -271,7 +271,7 @@ public class ClassGeneratorUtil implements Opcodes {
 
         // If no other constructors, generate a default constructor
         if ( type == CLASS && !hasConstructor )
-            generateConstructor(DEFAULTCONSTRUCTOR/*index*/, new String[0], ACC_PUBLIC, cw);
+            generateConstructor(DEFAULTCONSTRUCTOR/*index*/, new String[0], Opcodes.ACC_PUBLIC, cw);
 
         // Generate methods
         for (DelayedEvalBshMethod method : methods) {
@@ -286,7 +286,7 @@ public class ClassGeneratorUtil implements Opcodes {
                     && !method.hasModifier("abstract") )
                 method.getModifiers().addModifier("abstract");
             int modifiers = getASMModifiers(method.getModifiers());
-            boolean isStatic = (modifiers & ACC_STATIC) > 0;
+            boolean isStatic = (modifiers & Opcodes.ACC_STATIC) > 0;
 
             generateMethod(className, fqClassName, method.getName(), method.getReturnTypeDescriptor(),
                     method.getParamTypeDescriptors(), modifiers, cw);
@@ -294,7 +294,7 @@ public class ClassGeneratorUtil implements Opcodes {
             // check if method overrides existing method and generate super delegate.
             if ( null != classContainsMethod(superClass, method.getName(), method.getParamTypeDescriptors()) && !isStatic )
                 generateSuperDelegateMethod(superClassName, method.getName(), method.getReturnTypeDescriptor(),
-                        method.getParamTypeDescriptors(), ACC_PUBLIC, cw);
+                        method.getParamTypeDescriptors(), Opcodes.ACC_PUBLIC, cw);
         }
 
         return cw.toByteArray();
@@ -309,20 +309,20 @@ public class ClassGeneratorUtil implements Opcodes {
             return mods;
 
         if (modifiers.hasModifier("public"))
-            mods += ACC_PUBLIC;
+            mods += Opcodes.ACC_PUBLIC;
         if (modifiers.hasModifier("private"))
-            mods += ACC_PRIVATE;
+            mods += Opcodes.ACC_PRIVATE;
         if (modifiers.hasModifier("protected"))
-            mods += ACC_PROTECTED;
+            mods += Opcodes.ACC_PROTECTED;
         if (modifiers.hasModifier("static"))
-            mods += ACC_STATIC;
+            mods += Opcodes.ACC_STATIC;
         if (modifiers.hasModifier("synchronized"))
-            mods += ACC_SYNCHRONIZED;
+            mods += Opcodes.ACC_SYNCHRONIZED;
         if (modifiers.hasModifier("abstract"))
-            mods += ACC_ABSTRACT;
+            mods += Opcodes.ACC_ABSTRACT;
 
-        if ( ( mods & (ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED) ) == 0 ) {
-            mods |= ACC_PUBLIC;
+        if (( mods & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED) ) == 0 ) {
+            mods |= Opcodes.ACC_PUBLIC;
             modifiers.addModifier("public");
         }
 
@@ -360,29 +360,29 @@ public class ClassGeneratorUtil implements Opcodes {
      * @param cw current class writer */
     private void generateEnumSupport(String fqClassName, String className, String classDescript, ClassWriter cw) {
         // generate enum values() method delegated to static This.enumValues.
-        MethodVisitor cv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "values", "()["+classDescript, null, null);
+        MethodVisitor cv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "values", "()[" + classDescript, null, null);
         pushBshStatic(fqClassName, className, cv);
-        cv.visitMethodInsn(INVOKEVIRTUAL, "bsh/This", "enumValues", "()[Ljava/lang/Object;", false);
+        cv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "bsh/This", "enumValues", "()[Ljava/lang/Object;", false);
         generatePlainReturnCode("["+classDescript, cv);
         cv.visitMaxs(0, 0);
         // generate Enum.valueOf delegate method
-        cv = cw.visitMethod(ACC_PUBLIC | ACC_STATIC, "valueOf", "(Ljava/lang/String;)"+classDescript, null, null);
+        cv = cw.visitMethod(Opcodes.ACC_PUBLIC | Opcodes.ACC_STATIC, "valueOf", "(Ljava/lang/String;)" + classDescript, null, null);
         cv.visitLdcInsn(Type.getType(classDescript));
-        cv.visitVarInsn(ALOAD, 0);
-        cv.visitMethodInsn(INVOKESTATIC, "java/lang/Enum", "valueOf", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;", false);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "java/lang/Enum", "valueOf", "(Ljava/lang/Class;Ljava/lang/String;)Ljava/lang/Enum;", false);
         generatePlainReturnCode(fqClassName, cv);
         cv.visitMaxs(0, 0);
         // generate default private constructor and initInstance call
-        cv = cw.visitMethod(ACC_PRIVATE, "<init>", "(Ljava/lang/String;I)V", null, null);
-        cv.visitVarInsn(ALOAD, 0);
-        cv.visitVarInsn(ALOAD, 1);
-        cv.visitVarInsn(ILOAD, 2);
-        cv.visitMethodInsn(INVOKESPECIAL, "java/lang/Enum", "<init>", "(Ljava/lang/String;I)V", false);
-        cv.visitVarInsn(ALOAD, 0);
+        cv = cw.visitMethod(Opcodes.ACC_PRIVATE, "<init>", "(Ljava/lang/String;I)V", null, null);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
+        cv.visitVarInsn(Opcodes.ALOAD, 1);
+        cv.visitVarInsn(Opcodes.ILOAD, 2);
+        cv.visitMethodInsn(Opcodes.INVOKESPECIAL, "java/lang/Enum", "<init>", "(Ljava/lang/String;I)V", false);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
         cv.visitLdcInsn(className);
         generateParameterReifierCode(new String[0], false/*isStatic*/, cv);
-        cv.visitMethodInsn(INVOKESTATIC, "bsh/This", "initInstance", "(Lbsh/GeneratedClass;Ljava/lang/String;[Ljava/lang/Object;)V", false);
-        cv.visitInsn(RETURN);
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "bsh/This", "initInstance", "(Lbsh/GeneratedClass;Ljava/lang/String;[Ljava/lang/Object;)V", false);
+        cv.visitInsn(Opcodes.RETURN);
         cv.visitMaxs(0, 0);
     }
 
@@ -391,17 +391,17 @@ public class ClassGeneratorUtil implements Opcodes {
      * @param classDescript class descriptor string
      * @param cv clinit method visitor */
     private void generateEnumStaticInit(String fqClassName, String classDescript, MethodVisitor cv) {
-        int ordinal = ICONST_0;
+        int ordinal = Opcodes.ICONST_0;
         for ( Variable var : vars ) if ( var.hasModifier("enum") ) {
-            cv.visitTypeInsn(NEW, fqClassName);
-            cv.visitInsn(DUP);
+            cv.visitTypeInsn(Opcodes.NEW, fqClassName);
+            cv.visitInsn(Opcodes.DUP);
             cv.visitLdcInsn(var.getName());
-            if ( ICONST_5 >= ordinal )
+            if (Opcodes.ICONST_5 >= ordinal )
                 cv.visitInsn(ordinal++);
             else
-                cv.visitIntInsn(BIPUSH, ordinal++ - ICONST_0);
-            cv.visitMethodInsn(INVOKESPECIAL, fqClassName, "<init>", "(Ljava/lang/String;I)V", false);
-            cv.visitFieldInsn(PUTSTATIC, fqClassName, var.getName(), classDescript);
+                cv.visitIntInsn(Opcodes.BIPUSH, ordinal++ - Opcodes.ICONST_0);
+            cv.visitMethodInsn(Opcodes.INVOKESPECIAL, fqClassName, "<init>", "(Ljava/lang/String;I)V", false);
+            cv.visitFieldInsn(Opcodes.PUTSTATIC, fqClassName, var.getName(), classDescript);
         }
     }
 
@@ -414,7 +414,7 @@ public class ClassGeneratorUtil implements Opcodes {
      */
     private void generateMethod(String className, String fqClassName, String methodName, String returnType, String[] paramTypes, int modifiers, ClassWriter cw) {
         String[] exceptions = null;
-        boolean isStatic = (modifiers & ACC_STATIC) != 0;
+        boolean isStatic = (modifiers & Opcodes.ACC_STATIC) != 0;
 
         if (returnType == null) // map loose return type to Object
             returnType = OBJECT;
@@ -426,7 +426,7 @@ public class ClassGeneratorUtil implements Opcodes {
         // Generate method body
         MethodVisitor cv = cw.visitMethod(modifiers, methodName, methodDescriptor, paramTypesSig, exceptions);
 
-        if ((modifiers & ACC_ABSTRACT) != 0)
+        if ((modifiers & Opcodes.ACC_ABSTRACT) != 0)
             return;
 
         // Generate code to push the BSHTHIS or BSHSTATIC field
@@ -442,10 +442,10 @@ public class ClassGeneratorUtil implements Opcodes {
         generateParameterReifierCode(paramTypes, isStatic, cv);
 
         // Push the boolean constant 'true' (for declaredOnly)
-        cv.visitInsn(ICONST_1);
+        cv.visitInsn(Opcodes.ICONST_1);
 
         // Invoke the method This.invokeMethod( name, Class [] sig, boolean )
-        cv.visitMethodInsn(INVOKEVIRTUAL, "bsh/This", "invokeMethod", "(Ljava/lang/String;[Ljava/lang/Object;Z)Ljava/lang/Object;", false);
+        cv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, "bsh/This", "invokeMethod", "(Ljava/lang/String;[Ljava/lang/Object;Z)Ljava/lang/Object;", false);
 
         // Generate code to return the value
         generateReturnCode(returnType, cv);
@@ -473,7 +473,7 @@ public class ClassGeneratorUtil implements Opcodes {
 
         // Generate code to push arguments as an object array
         generateParameterReifierCode(paramTypes, false/*isStatic*/, cv);
-        cv.visitVarInsn(ASTORE, argsVar);
+        cv.visitVarInsn(Opcodes.ASTORE, argsVar);
 
         // Generate the code implementing the alternate constructor switch
         generateConstructorSwitch(index, argsVar, consArgsVar, cv);
@@ -481,18 +481,18 @@ public class ClassGeneratorUtil implements Opcodes {
         // Generate code to invoke the ClassGeneratorUtil initInstance() method
 
         // push 'this'
-        cv.visitVarInsn(ALOAD, 0);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
 
         // Push the class/constructor name as a constant
         cv.visitLdcInsn(className);
 
         // Push arguments as an object array
-        cv.visitVarInsn(ALOAD, argsVar);
+        cv.visitVarInsn(Opcodes.ALOAD, argsVar);
 
         // invoke the initInstance() method
-        cv.visitMethodInsn(INVOKESTATIC, "bsh/This", "initInstance", "(Lbsh/GeneratedClass;Ljava/lang/String;[Ljava/lang/Object;)V", false);
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "bsh/This", "initInstance", "(Lbsh/GeneratedClass;Ljava/lang/String;[Ljava/lang/Object;)V", false);
 
-        cv.visitInsn(RETURN);
+        cv.visitInsn(Opcodes.RETURN);
 
         // values here are ignored, computed automatically by ClassWriter
         cv.visitMaxs(0, 0);
@@ -504,12 +504,12 @@ public class ClassGeneratorUtil implements Opcodes {
     void generateStaticInitializer(ClassWriter cw) {
 
         // Generate code to invoke the ClassGeneratorUtil initStatic() method
-        MethodVisitor cv = cw.visitMethod(ACC_STATIC, "<clinit>", "()V", null/*sig*/, null/*exceptions*/);
+        MethodVisitor cv = cw.visitMethod(Opcodes.ACC_STATIC, "<clinit>", "()V", null/*sig*/, null/*exceptions*/);
 
         // initialize _bshStaticThis
-        cv.visitFieldInsn(GETSTATIC, fqClassName, "UUID", "Ljava/lang/String;");
-        cv.visitMethodInsn(INVOKESTATIC, "bsh/This", "pullBshStatic", "(Ljava/lang/String;)Lbsh/This;", false);
-        cv.visitFieldInsn(PUTSTATIC, fqClassName, BSHSTATIC+className, "Lbsh/This;");
+        cv.visitFieldInsn(Opcodes.GETSTATIC, fqClassName, "UUID", "Ljava/lang/String;");
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "bsh/This", "pullBshStatic", "(Ljava/lang/String;)Lbsh/This;", false);
+        cv.visitFieldInsn(Opcodes.PUTSTATIC, fqClassName, BSHSTATIC + className, "Lbsh/This;");
 
         if ( type == ENUM )
             generateEnumStaticInit(fqClassName, classDescript, cv);
@@ -518,9 +518,9 @@ public class ClassGeneratorUtil implements Opcodes {
         cv.visitLdcInsn(Type.getType(classDescript));
 
         // invoke the initStatic() method
-        cv.visitMethodInsn(INVOKESTATIC, "bsh/This", "initStatic", "(Ljava/lang/Class;)V", false);
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "bsh/This", "initStatic", "(Ljava/lang/Class;)V", false);
 
-        cv.visitInsn(RETURN);
+        cv.visitInsn(Opcodes.RETURN);
 
         // values here are ignored, computed automatically by ClassWriter
         cv.visitMaxs(0, 0);
@@ -558,22 +558,22 @@ public class ClassGeneratorUtil implements Opcodes {
         pushBshStatic(fqClassName, className, cv);
 
         // push args
-        cv.visitVarInsn(ALOAD, argsVar);
+        cv.visitVarInsn(Opcodes.ALOAD, argsVar);
 
         // push this constructor index number onto stack
-        cv.visitIntInsn(BIPUSH, consIndex);
+        cv.visitIntInsn(Opcodes.BIPUSH, consIndex);
 
         // invoke the ClassGeneratorUtil getConstructorsArgs() method
-        cv.visitMethodInsn(INVOKESTATIC, "bsh/This", "getConstructorArgs", "(Ljava/lang/Class;Lbsh/This;[Ljava/lang/Object;I)" + "Lbsh/This$ConstructorArgs;", false);
+        cv.visitMethodInsn(Opcodes.INVOKESTATIC, "bsh/This", "getConstructorArgs", "(Ljava/lang/Class;Lbsh/This;[Ljava/lang/Object;I)" + "Lbsh/This$ConstructorArgs;", false);
 
         // store ConstructorArgs in consArgsVar
-        cv.visitVarInsn(ASTORE, consArgsVar);
+        cv.visitVarInsn(Opcodes.ASTORE, consArgsVar);
 
         // Get the ConstructorArgs selector field from ConstructorArgs
 
         // push ConstructorArgs
-        cv.visitVarInsn(ALOAD, consArgsVar);
-        cv.visitFieldInsn(GETFIELD, "bsh/This$ConstructorArgs", "selector", "I");
+        cv.visitVarInsn(Opcodes.ALOAD, consArgsVar);
+        cv.visitFieldInsn(Opcodes.GETFIELD, "bsh/This$ConstructorArgs", "selector", "I");
 
         // start switch
         cv.visitTableSwitchInsn(0/*min*/, cases - 1/*max*/, defaultLabel, labels);
@@ -588,8 +588,8 @@ public class ClassGeneratorUtil implements Opcodes {
         // generate the default branch of switch
         cv.visitLabel(defaultLabel);
         // default branch always invokes no args super
-        cv.visitVarInsn(ALOAD, 0); // push 'this'
-        cv.visitMethodInsn(INVOKESPECIAL, superClassName, "<init>", "()V", false);
+        cv.visitVarInsn(Opcodes.ALOAD, 0); // push 'this'
+        cv.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassName, "<init>", "()V", false);
 
         // done with switch
         cv.visitLabel(endLabel);
@@ -597,15 +597,15 @@ public class ClassGeneratorUtil implements Opcodes {
 
     // push the class static This object
     private static void pushBshStatic(String fqClassName, String className, MethodVisitor cv) {
-        cv.visitFieldInsn(GETSTATIC, fqClassName, BSHSTATIC + className, "Lbsh/This;");
+        cv.visitFieldInsn(Opcodes.GETSTATIC, fqClassName, BSHSTATIC + className, "Lbsh/This;");
     }
 
     // push the class instance This object
     private static void pushBshThis(String fqClassName, String className, MethodVisitor cv) {
         // Push 'this'
-        cv.visitVarInsn(ALOAD, 0);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
         // Get the instance field
-        cv.visitFieldInsn(GETFIELD, fqClassName, BSHTHIS + className, "Lbsh/This;");
+        cv.visitFieldInsn(Opcodes.GETFIELD, fqClassName, BSHTHIS + className, "Lbsh/This;");
     }
 
     /*
@@ -617,7 +617,7 @@ public class ClassGeneratorUtil implements Opcodes {
     private void doSwitchBranch(int index, String targetClassName, String[] paramTypes, Label endLabel, Label[] labels, int consArgsVar, MethodVisitor cv) {
         cv.visitLabel(labels[index]);
 
-        cv.visitVarInsn(ALOAD, 0); // push this before args
+        cv.visitVarInsn(Opcodes.ALOAD, 0); // push this before args
 
         // Unload the arguments from the ConstructorArgs object
         for (String type : paramTypes) {
@@ -642,7 +642,7 @@ public class ClassGeneratorUtil implements Opcodes {
                 method = "getObject";
 
             // invoke the iterator method on the ConstructorArgs
-            cv.visitVarInsn(ALOAD, consArgsVar); // push the ConstructorArgs
+            cv.visitVarInsn(Opcodes.ALOAD, consArgsVar); // push the ConstructorArgs
             String className = "bsh/This$ConstructorArgs";
             String retType;
             if (method.equals("getObject"))
@@ -650,16 +650,16 @@ public class ClassGeneratorUtil implements Opcodes {
             else
                 retType = type;
 
-            cv.visitMethodInsn(INVOKEVIRTUAL, className, method, "()" + retType, false);
+            cv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, className, method, "()" + retType, false);
             // if it's an object type we must do a check cast
             if (method.equals("getObject"))
-                cv.visitTypeInsn(CHECKCAST, descriptorToClassName(type));
+                cv.visitTypeInsn(Opcodes.CHECKCAST, descriptorToClassName(type));
         }
 
         // invoke the constructor for this branch
         String descriptor = getMethodDescriptor("V", paramTypes);
-        cv.visitMethodInsn(INVOKESPECIAL, targetClassName, "<init>", descriptor, false);
-        cv.visitJumpInsn(GOTO, endLabel);
+        cv.visitMethodInsn(Opcodes.INVOKESPECIAL, targetClassName, "<init>", descriptor, false);
+        cv.visitJumpInsn(Opcodes.GOTO, endLabel);
     }
 
     private static String getMethodDescriptor(String returnType, String[] paramTypes) {
@@ -691,18 +691,18 @@ public class ClassGeneratorUtil implements Opcodes {
         // Add method body
         MethodVisitor cv = cw.visitMethod(modifiers, "_bshSuper" + methodName, methodDescriptor, paramTypesSig, exceptions);
 
-        cv.visitVarInsn(ALOAD, 0);
+        cv.visitVarInsn(Opcodes.ALOAD, 0);
         // Push vars
         int localVarIndex = 1;
         for (String paramType : paramTypes) {
             if (isPrimitive(paramType))
-                cv.visitVarInsn(ILOAD, localVarIndex);
+                cv.visitVarInsn(Opcodes.ILOAD, localVarIndex);
             else
-                cv.visitVarInsn(ALOAD, localVarIndex);
+                cv.visitVarInsn(Opcodes.ALOAD, localVarIndex);
             localVarIndex += paramType.equals("D") || paramType.equals("J") ? 2 : 1;
         }
 
-        cv.visitMethodInsn(INVOKESPECIAL, superClassName, methodName, methodDescriptor, false);
+        cv.visitMethodInsn(Opcodes.INVOKESPECIAL, superClassName, methodName, methodDescriptor, false);
 
         generatePlainReturnCode(returnType, cv);
 
@@ -722,14 +722,14 @@ public class ClassGeneratorUtil implements Opcodes {
         Reflect.gatherMethodsRecursive(type, null, 0, methsp, methso);
 
         Stream.concat(methsp.stream(), methso.stream())
-        .filter( m -> ( m.getModifiers() & ACC_ABSTRACT ) > 0 )
+        .filter( m -> (m.getModifiers() & Opcodes.ACC_ABSTRACT ) > 0 )
         .forEach( method -> {
             Method[] meth = Stream.concat(methsp.stream(), methso.stream())
-                .filter( m -> ( m.getModifiers() & ( ACC_ABSTRACT | ACC_PRIVATE ) ) == 0
+                .filter( m -> ( m.getModifiers() & (Opcodes.ACC_ABSTRACT | Opcodes.ACC_PRIVATE ) ) == 0
                     && method.getName().equals(m.getName())
                     && Types.areSignaturesEqual(method.getParameterTypes(), m.getParameterTypes()))
-                .sorted( (a, b) -> ( a.getModifiers() & ACC_PUBLIC ) > 0 ? 1
-                        : ( a.getModifiers() & ACC_PROTECTED ) > 0 ? 0 : -1 )
+                .sorted( (a, b) -> (a.getModifiers() & Opcodes.ACC_PUBLIC ) > 0 ? 1
+                        : (a.getModifiers() & Opcodes.ACC_PROTECTED ) > 0 ? 0 : -1 )
                 .toArray(Method[]::new);
 
             if ( meth.length == 0 && !Reflect.getClassModifiers(type).hasModifier("abstract") )
@@ -748,10 +748,10 @@ public class ClassGeneratorUtil implements Opcodes {
      * @return true if visibility is not reduced
      * @throws RuntimeException if validation fails */
     static boolean checkInheritanceRules(int parentModifiers, int overriddenModifiers, Class<?> parentClass) {
-        int prnt = parentModifiers & ( ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED );
-        int chld = overriddenModifiers & ( ACC_PUBLIC | ACC_PRIVATE | ACC_PROTECTED );
+        int prnt = parentModifiers & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED );
+        int chld = overriddenModifiers & (Opcodes.ACC_PUBLIC | Opcodes.ACC_PRIVATE | Opcodes.ACC_PROTECTED );
 
-        if ( chld == prnt || prnt == ACC_PRIVATE || chld == ACC_PUBLIC || prnt == 0 && chld != ACC_PRIVATE )
+        if ( chld == prnt || prnt == Opcodes.ACC_PRIVATE || chld == Opcodes.ACC_PUBLIC || prnt == 0 && chld != Opcodes.ACC_PRIVATE )
             return true;
 
         throw new RuntimeException("Cannot reduce the visibility of the inherited method from "
@@ -785,20 +785,20 @@ public class ClassGeneratorUtil implements Opcodes {
      */
     private static void generatePlainReturnCode(String returnType, MethodVisitor cv) {
         if (returnType.equals("V"))
-            cv.visitInsn(RETURN);
+            cv.visitInsn(Opcodes.RETURN);
         else if (isPrimitive(returnType)) {
-            int opcode = IRETURN;
+            int opcode = Opcodes.IRETURN;
             if (returnType.equals("D"))
-                opcode = DRETURN;
+                opcode = Opcodes.DRETURN;
             else if (returnType.equals("F"))
-                opcode = FRETURN;
+                opcode = Opcodes.FRETURN;
             else if (returnType.equals("J")) //long
-                opcode = LRETURN;
+                opcode = Opcodes.LRETURN;
 
             cv.visitInsn(opcode);
         } else {
-            cv.visitTypeInsn(CHECKCAST, descriptorToClassName(returnType));
-            cv.visitInsn(ARETURN);
+            cv.visitTypeInsn(Opcodes.CHECKCAST, descriptorToClassName(returnType));
+            cv.visitInsn(Opcodes.ARETURN);
         }
     }
 
@@ -814,43 +814,43 @@ public class ClassGeneratorUtil implements Opcodes {
      * @param isStatic the enclosing methods is static
      */
     private void generateParameterReifierCode(String[] paramTypes, boolean isStatic, final MethodVisitor cv) {
-        cv.visitIntInsn(SIPUSH, paramTypes.length);
-        cv.visitTypeInsn(ANEWARRAY, "java/lang/Object");
+        cv.visitIntInsn(Opcodes.SIPUSH, paramTypes.length);
+        cv.visitTypeInsn(Opcodes.ANEWARRAY, "java/lang/Object");
         int localVarIndex = isStatic ? 0 : 1;
         for (int i = 0; i < paramTypes.length; ++i) {
             String param = paramTypes[i];
-            cv.visitInsn(DUP);
-            cv.visitIntInsn(SIPUSH, i);
+            cv.visitInsn(Opcodes.DUP);
+            cv.visitIntInsn(Opcodes.SIPUSH, i);
             if (isPrimitive(param)) {
                 int opcode;
                 if (param.equals("F"))
-                    opcode = FLOAD;
+                    opcode = Opcodes.FLOAD;
                 else if (param.equals("D"))
-                    opcode = DLOAD;
+                    opcode = Opcodes.DLOAD;
                 else if (param.equals("J"))
-                    opcode = LLOAD;
+                    opcode = Opcodes.LLOAD;
                 else
-                    opcode = ILOAD;
+                    opcode = Opcodes.ILOAD;
 
                 String type = "bsh/Primitive";
-                cv.visitTypeInsn(NEW, type);
-                cv.visitInsn(DUP);
+                cv.visitTypeInsn(Opcodes.NEW, type);
+                cv.visitInsn(Opcodes.DUP);
                 cv.visitVarInsn(opcode, localVarIndex);
-                cv.visitMethodInsn(INVOKESPECIAL, type, "<init>", "(" + param + ")V", false);
-                cv.visitInsn(AASTORE);
+                cv.visitMethodInsn(Opcodes.INVOKESPECIAL, type, "<init>", "(" + param + ")V", false);
+                cv.visitInsn(Opcodes.AASTORE);
             } else {
                 // If null wrap value as bsh.Primitive.NULL.
-                cv.visitVarInsn(ALOAD, localVarIndex);
+                cv.visitVarInsn(Opcodes.ALOAD, localVarIndex);
                 Label isnull = new Label();
-                cv.visitJumpInsn(IFNONNULL, isnull);
-                cv.visitFieldInsn(GETSTATIC, "bsh/Primitive", "NULL", "Lbsh/Primitive;");
-                cv.visitInsn(AASTORE);
+                cv.visitJumpInsn(Opcodes.IFNONNULL, isnull);
+                cv.visitFieldInsn(Opcodes.GETSTATIC, "bsh/Primitive", "NULL", "Lbsh/Primitive;");
+                cv.visitInsn(Opcodes.AASTORE);
                 // else store parameter as Object.
                 Label notnull = new Label();
-                cv.visitJumpInsn(GOTO, notnull);
+                cv.visitJumpInsn(Opcodes.GOTO, notnull);
                 cv.visitLabel(isnull);
-                cv.visitVarInsn(ALOAD, localVarIndex);
-                cv.visitInsn(AASTORE);
+                cv.visitVarInsn(Opcodes.ALOAD, localVarIndex);
+                cv.visitInsn(Opcodes.AASTORE);
                 cv.visitLabel(notnull);
             }
             localVarIndex += param.equals("D") || param.equals("J") ? 2 : 1;
@@ -868,10 +868,10 @@ public class ClassGeneratorUtil implements Opcodes {
      */
     private void generateReturnCode(String returnType, MethodVisitor cv) {
         if (returnType.equals("V")) {
-            cv.visitInsn(POP);
-            cv.visitInsn(RETURN);
+            cv.visitInsn(Opcodes.POP);
+            cv.visitInsn(Opcodes.RETURN);
         } else if (isPrimitive(returnType)) {
-            int opcode = IRETURN;
+            int opcode = Opcodes.IRETURN;
             String type;
             String meth;
             if (returnType.equals("Z")) {
@@ -887,15 +887,15 @@ public class ClassGeneratorUtil implements Opcodes {
                 type = "java/lang/Short";
                 meth = "shortValue";
             } else if (returnType.equals("F")) {
-                opcode = FRETURN;
+                opcode = Opcodes.FRETURN;
                 type = "java/lang/Float";
                 meth = "floatValue";
             } else if (returnType.equals("J")) {
-                opcode = LRETURN;
+                opcode = Opcodes.LRETURN;
                 type = "java/lang/Long";
                 meth = "longValue";
             } else if (returnType.equals("D")) {
-                opcode = DRETURN;
+                opcode = Opcodes.DRETURN;
                 type = "java/lang/Double";
                 meth = "doubleValue";
             } else /*if (returnType.equals("I"))*/ {
@@ -904,12 +904,12 @@ public class ClassGeneratorUtil implements Opcodes {
             }
 
             String desc = returnType;
-            cv.visitTypeInsn(CHECKCAST, type); // type is correct here
-            cv.visitMethodInsn(INVOKEVIRTUAL, type, meth, "()" + desc, false);
+            cv.visitTypeInsn(Opcodes.CHECKCAST, type); // type is correct here
+            cv.visitMethodInsn(Opcodes.INVOKEVIRTUAL, type, meth, "()" + desc, false);
             cv.visitInsn(opcode);
         } else {
-            cv.visitTypeInsn(CHECKCAST, descriptorToClassName(returnType));
-            cv.visitInsn(ARETURN);
+            cv.visitTypeInsn(Opcodes.CHECKCAST, descriptorToClassName(returnType));
+            cv.visitInsn(Opcodes.ARETURN);
         }
     }
 

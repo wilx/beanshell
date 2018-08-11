@@ -1,10 +1,18 @@
-package bsh;
+package bsh.engine;
 
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.util.Map;
 
+import bsh.BshMethod;
+import bsh.EvalError;
+import bsh.Interpreter;
+import bsh.NameSpace;
+import bsh.Primitive;
+import bsh.This;
+import bsh.Types;
+import bsh.UtilEvalError;
 import bsh.classpath.ClassManagerImpl;
 
 /**
@@ -75,7 +83,7 @@ public class PreparsedScript {
             }
         }
         final Object result = method.invoke(new Object[0], _interpreter);
-        if ( Types.getType(result) == Void.TYPE )
+        if (Types.getType(result) == Void.TYPE )
             return null;
         return Primitive.unwrap(result);
     }
